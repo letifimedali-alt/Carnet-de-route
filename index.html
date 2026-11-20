@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1b5e45" />
+  <meta name="description" content="Carnet de route professionnel — suivi des déplacements et frais." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Carnet de route</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,650&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #f3efe6;
+      --card: #fffcf6;
+      --ink: #1c1915;
+      --muted: #5c564c;
+      --line: #e3dacb;
+      --pine: #1b5e45;
+      --pine-deep: #154a38;
+      --pine-soft: #e6f3ec;
+      --radius: 1rem;
+      --shadow: 0 1px 0 color-mix(in oklab, var(--ink) 4%, transparent),
+        0 18px 40px color-mix(in oklab, var(--ink) 4%, transparent);
+      font-family: "Source Sans 3", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.5;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-font-smoothing: antialiased; color-scheme: light; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--paper);
+      box-shadow: inset 0 4px 0 var(--pine);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    h1, h2, h3 {
+      font-family: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+      margin: 0;
+    }
+    p { margin: 0; text-wrap: pretty; }
+    button, [role="button"] { cursor: pointer; font: inherit; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    :focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; }
+    input:focus-visible { outline-offset: 0; }
+    .money { font-variant-numeric: tabular-nums; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .wrap {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 0 1rem 5rem;
+    }
+    @media (min-width: 640px) { .wrap { padding-left: 1.5rem; padding-right: 1.5rem; } }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in oklab, var(--paper) 90%, transparent);
+      backdrop-filter: blur(12px);
+    }
+    header .inner {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    @media (min-width: 640px) { header .inner { padding-left: 1.5rem; padding-right: 1.5rem; } }
+    .kicker {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--pine);
+    }
+    h1 { font-size: 1.875rem; line-height: 1; }
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25rem;
+      max-width: 20rem;
+      background: var(--line);
+      border-radius: 0.75rem;
+      padding: 0.25rem;
+    }
+    .tabs button {
+      min-height: 2.75rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.875rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .tabs button[aria-selected="true"] {
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    main { padding-top: 1.25rem; }
+    .grid { display: grid; gap: 1rem; }
+    @media (min-width: 1024px) {
+      .ledger-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+      .sticky-panel { position: sticky; top: 8.75rem; }
+    }
+
+    .field {
+      width: 100%;
+      min-height: 3rem;
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      background: var(--card);
+      padding: 0 0.75rem;
+      font-size: 1rem;
+      color: var(--ink);
+    }
+    label, .label {
+      display: block;
+      margin-bottom: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 3rem;
+      border-radius: 0.75rem;
+      border: 0;
+      padding: 0 1rem;
+      font-weight: 600;
+    }
+    .btn-primary {
+      width: 100%;
+      background: var(--pine);
+      color: var(--paper);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--pine-deep); }
+    .btn-secondary {
+      min-height: 2.75rem;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      font-size: 0.875rem;
+    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--pine); }
+    .btn-quiet {
+      min-height: 2.75rem;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0 0.75rem;
+    }
+    .btn-quiet:hover { color: var(--ink); }
+    .btn-icon {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .btn-icon:hover { border-color: var(--pine); }
+    .btn-danger {
+      min-height: 2.75rem;
+      border: 0;
+      border-radius: 0.75rem;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0 0.75rem;
+    }
+
+    .segment {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25rem;
+      background: var(--line);
+      border-radius: 0.75rem;
+      padding: 0.25rem;
+    }
+    .segment button {
+      min-height: 2.75rem;
+      border: 0;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .segment button[aria-pressed="true"] {
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .place-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-height: 3rem;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 0.75rem;
+      background: var(--card);
+      padding: 0 0.75rem;
+      text-align: left;
+      font-weight: 600;
+    }
+    .place-btn[aria-pressed="true"] {
+      border-color: var(--pine);
+      background: var(--pine-soft);
+    }
+    .place-btn span:last-child {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+    .place-list {
+      display: grid;
+      gap: 0.5rem;
+      max-height: 16rem;
+      overflow: auto;
+    }
+
+    .amount {
+      border-radius: 0.75rem;
+      background: var(--pine-soft);
+      padding: 0.75rem 1rem;
+    }
+    .amount .row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .amount .value {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.875rem;
+      line-height: 1;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      background: var(--pine-soft);
+      color: var(--pine);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.125rem 0.5rem;
+    }
+
+    .bar {
+      height: 0.375rem;
+      border-radius: 999px;
+      background: var(--line);
+      overflow: hidden;
+      margin-top: 0.375rem;
+    }
+    .bar > i {
+      display: block;
+      height: 100%;
+      background: var(--pine);
+      border-radius: 999px;
+    }
+
+    .muted { color: var(--muted); }
+    .sm { font-size: 0.875rem; }
+    .xs { font-size: 0.75rem; }
+    .fw6 { font-weight: 600; }
+    .mt1 { margin-top: 0.25rem; }
+    .mt2 { margin-top: 0.5rem; }
+    .mt3 { margin-top: 0.75rem; }
+    .mt4 { margin-top: 1rem; }
+    .mt5 { margin-top: 1.25rem; }
+    .gap2 { gap: 0.5rem; }
+    .gap3 { gap: 0.75rem; }
+    .flex { display: flex; }
+    .flex-wrap { flex-wrap: wrap; }
+    .items-center { align-items: center; }
+    .items-start { align-items: flex-start; }
+    .items-baseline { align-items: baseline; }
+    .justify-between { justify-content: space-between; }
+    .min0 { min-width: 0; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shrink0 { flex-shrink: 0; }
+    .hidden { display: none !important; }
+    .pad { padding: 1rem; }
+    @media (min-width: 640px) { .pad { padding: 1.25rem; } }
+
+    .day-head {
+      border-top: 1px solid var(--line);
+      background: var(--paper);
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--muted);
+      font-family: "Source Sans 3", sans-serif;
+      letter-spacing: 0;
+    }
+    .trip-row {
+      border-top: 1px solid var(--line);
+      padding: 0.75rem 1rem;
+    }
+    .trip-row.hi { background: var(--pine-soft); }
+
+    .steps {
+      display: grid;
+      gap: 0.75rem;
+    }
+    @media (min-width: 640px) {
+      .steps { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .step-n {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.5rem;
+      color: var(--pine);
+    }
+
+    .status { font-size: 0.875rem; font-weight: 600; }
+    .error { font-size: 0.875rem; font-weight: 600; }
+
+    .action-bar {
+      position: fixed;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: 20;
+      border-top: 1px solid var(--line);
+      background: var(--card);
+      padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+    }
+    @media (min-width: 1024px) {
+      .action-bar {
+        position: static;
+        border: 0;
+        background: transparent;
+        padding: 0;
+      }
+      .action-bar .mobile-only { display: none; }
+      .action-bar .btn-primary { width: 100%; }
+    }
+    @media (max-width: 1023px) {
+      .desktop-only { display: none !important; }
+      .ledger-grid { padding-bottom: 5.5rem; }
+    }
+    .action-bar .inner {
+      max-width: 56rem;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="inner">
+      <div>
+        <p class="kicker">Travail</p>
+        <h1>Carnet de route</h1>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" id="tab-journal" aria-selected="true" data-view="journal">Journal</button>
+        <button type="button" role="tab" id="tab-lieux" aria-selected="false" data-view="lieux">Lieux</button>
+      </div>
+      <div class="flex flex-wrap gap2 items-center"><button class="btn-secondary" type="button" id="backup-export">Sauvegarde</button><button class="btn-secondary" type="button" id="backup-import">Restaurer</button><button class="btn-secondary hidden" type="button" id="install-app">Installer</button><input type="file" accept="application/json" id="backup-file" class="hidden" /></div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app"></main>
+
+  <script>
+  (() => {
+    const KEY = "carnet-de-route-v2-tnd";
+    const moneyFmt = new Intl.NumberFormat("fr-TN", { style: "currency", currency: "TND" });
+    const dayFmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const monthFmt = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
+    const shortFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
+    const shortYearFmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+
+    const state = load();
+    let view = "journal";
+    let mode = "month";
+    let anchor = new Date();
+    let editingTripId = null;
+    let lastAddedId = null;
+    let focusPlaceId = null;
+    let confirmDeleteTripId = null;
+    let confirmDeletePlaceId = null;
+    let editingPlaceId = null;
+    let flash = null;
+    let statusMsg = null;
+
+    // Form draft
+    let form = {
+      date: todayISO(),
+      placeId: null,
+      roundTrip: state.preferences.roundTrip, multiplier: state.preferences.multiplier || (state.preferences.roundTrip ? 2 : 1),
+      note: "",
+      adjust: false,
+      priceInput: "",
+      showNote: false,
+      error: null,
+    };
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return { places: [], trips: [], advances: [], preferences: { roundTrip: false, multiplier: 1 } };
+        const data = JSON.parse(raw);
+        return {
+          places: Array.isArray(data.places) ? data.places.filter(isPlace) : [],
+          trips: Array.isArray(data.trips) ? data.trips.filter(isTrip) : [],
+          advances: Array.isArray(data.advances) ? data.advances.filter(isAdvance) : [],
+          preferences: { roundTrip: data.preferences?.roundTrip === true, multiplier: Number(data.preferences?.multiplier) || (data.preferences?.roundTrip ? 2 : 1) },
+        };
+      } catch {
+        return { places: [], trips: [], advances: [], preferences: { roundTrip: false, multiplier: 1 } };
+      }
+    }
+    function save() {
+      localStorage.setItem(KEY, JSON.stringify({
+        places: state.places,
+        trips: state.trips,
+        advances: state.advances,
+        preferences: state.preferences,
+      }));
+    }
+    function isPlace(v) {
+      return v && typeof v.id === "string" && typeof v.name === "string" && typeof v.priceMillimes === "number";
+    }
+    function isAdvance(v) { return v && typeof v.id === "string" && typeof v.date === "string" && typeof v.amountMillimes === "number"; }
+    function isTrip(v) {
+      return v && typeof v.id === "string" && typeof v.date === "string" && typeof v.placeId === "string"
+        && typeof v.placeName === "string" && typeof v.unitPriceMillimes === "number"
+        && typeof v.roundTrip === "boolean" && typeof v.note === "string";
+    }
+    function uid() {
+      return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+    }
+    function formatMoney(m) { return moneyFmt.format(m / 1000); }
+    function millimesToInput(m) {
+      const abs = Math.abs(Math.round(m));
+      const dinars = Math.floor(abs / 1000);
+      const frac = abs % 1000;
+      if (frac === 0) return String(dinars);
+      const s = String(frac).padStart(3, "0").replace(/0+$/, "");
+      return `${dinars},${s}`;
+    }
+    function parseMoney(input) {
+      const cleaned = String(input).trim().replace(/\s/g, "").replace(/[TDNtdn]/g, "").replace(",", ".");
+      if (!/^\d+(\.\d{1,3})?$/.test(cleaned)) return null;
+      const value = Number(cleaned);
+      if (!Number.isFinite(value) || value > 10_000_000) return null;
+      return Math.round(value * 1000);
+    }
+    function toISODate(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    function todayISO() { return toISODate(new Date()); }
+    function parseISODate(iso) {
+      const [y, m, d] = iso.split("-").map(Number);
+      return new Date(y || 1970, (m || 1) - 1, d || 1);
+    }
+    function startOfWeek(date) {
+      const s = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+      return s;
+    }
+    function addDays(date, n) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + n);
+      return d;
+    }
+    function capitalize(s) {
+      return s ? s.charAt(0).toLocaleUpperCase("fr-FR") + s.slice(1) : s;
+    }
+    function periodLabel() {
+      if (mode === "all") return "Toutes les dates";
+      if (mode === "year") return String(anchor.getFullYear());
+      if (mode === "month") return capitalize(monthFmt.format(anchor));
+      const start = startOfWeek(anchor);
+      const end = addDays(start, 6);
+      if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+        return `${start.getDate()} – ${end.getDate()} ${capitalize(monthFmt.format(end))}`;
+      }
+      return `${shortFmt.format(start)} – ${shortYearFmt.format(end)}`;
+    }
+    function inPeriod(iso) {
+      if (mode === "all") return true;
+      const d = parseISODate(iso);
+      if (mode === "year") return d.getFullYear() === anchor.getFullYear();
+      if (mode === "month") return d.getFullYear() === anchor.getFullYear() && d.getMonth() === anchor.getMonth();
+      const start = toISODate(startOfWeek(anchor));
+      const end = toISODate(addDays(startOfWeek(anchor), 6));
+      return iso >= start && iso <= end;
+    }
+    function shift(dir) {
+      if (mode === "month") anchor = new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1);
+      else if (mode === "year") anchor = new Date(anchor.getFullYear() + dir, 0, 1);
+      else if (mode === "week") anchor = addDays(anchor, 7 * dir);
+      render();
+    }
+    function tripAmount(t) { return t.unitPriceMillimes * (Number(t.multiplier) || (t.roundTrip ? 2 : 1)); }
+    function countLabel(n, one, many) {
+      return `${n.toLocaleString("fr-FR")} ${n === 1 ? one : many}`;
+    }
+    function sortPlacesForPicker() {
+      const last = new Map();
+      for (const t of state.trips) {
+        const stamp = `${t.date}T${t.createdAt || ""}`;
+        if (!last.has(t.placeId) || stamp > last.get(t.placeId)) last.set(t.placeId, stamp);
+      }
+      return [...state.places].sort((a, b) => {
+        const la = last.get(a.id) || "";
+        const lb = last.get(b.id) || "";
+        if (la !== lb) return lb.localeCompare(la);
+        return a.name.localeCompare(b.name, "fr", { sensitivity: "base" });
+      });
+    }
+    function totalsByPlace(trips) {
+      const map = new Map();
+      for (const t of trips) {
+        const key = t.placeId || t.placeName;
+        const amt = tripAmount(t);
+        const prev = map.get(key);
+        if (!prev) map.set(key, { key, name: t.placeName, count: 1, cents: amt });
+        else { prev.count++; prev.cents += amt; prev.name = t.placeName; }
+      }
+      return [...map.values()].sort((a, b) => b.cents - a.cents || a.name.localeCompare(b.name, "fr"));
+    }
+    function groupByDate(trips) {
+      const sorted = [...trips].sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || "").localeCompare(a.createdAt || ""));
+      const groups = [];
+      for (const t of sorted) {
+        const last = groups[groups.length - 1];
+        if (!last || last.date !== t.date) groups.push({ date: t.date, trips: [t] });
+        else last.trips.push(t);
+      }
+      return groups;
+    }
+    function ensurePlaceSelected() {
+      const picker = sortPlacesForPicker();
+      if (focusPlaceId && state.places.some((p) => p.id === focusPlaceId)) {
+        form.placeId = focusPlaceId;
+        form.adjust = false;
+        focusPlaceId = null;
+        return;
+      }
+      focusPlaceId = null;
+      if (form.placeId && state.places.some((p) => p.id === form.placeId)) return;
+      form.placeId = picker[0]?.id || null;
+    }
+
+    // ——— Actions ———
+    function addPlace(name, priceMillimes) {
+      state.places.push({
+        id: uid(),
+        name: name.trim(),
+        priceMillimes,
+        createdAt: new Date().toISOString(),
+      });
+      save();
+      statusMsg = `${name.trim()} ajouté · ${formatMoney(priceMillimes)} par trajet (TND).`;
+      render();
+    }
+    function updatePlace(id, name, priceMillimes) {
+      const p = state.places.find((x) => x.id === id);
+      if (!p) return;
+      p.name = name.trim();
+      p.priceMillimes = priceMillimes;
+      save();
+      editingPlaceId = null;
+      statusMsg = "Lieu mis à jour. Les trajets déjà notés ne changent pas.";
+      render();
+    }
+    function removePlace(id) {
+      state.places = state.places.filter((p) => p.id !== id);
+      save();
+      confirmDeletePlaceId = null;
+      editingPlaceId = null;
+      render();
+    }
+    function addTrip() {
+      form.error = null;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
+        form.error = "Indique une date.";
+        render();
+        return;
+      }
+      const place = state.places.find((p) => p.id === form.placeId);
+      if (!place) {
+        form.error = "Choisis un lieu.";
+        render();
+        return;
+      }
+      const unit = form.adjust ? parseMoney(form.priceInput) : place.priceMillimes;
+      if (unit == null) {
+        form.error = "Indique un prix valide, par exemple 25,500.";
+        render();
+        return;
+      }
+      const trip = {
+        id: uid(),
+        date: form.date,
+        placeId: place.id,
+        placeName: place.name,
+        unitPriceMillimes: unit,
+        roundTrip: form.multiplier === 2, multiplier: form.multiplier,
+        note: form.note.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      state.trips.push(trip);
+      state.preferences.roundTrip = form.roundTrip; state.preferences.multiplier = form.multiplier;
+      save();
+      form.note = "";
+      form.adjust = false;
+      form.showNote = false;
+      form.error = null;
+      flash = `${trip.placeName} · ${formatMoney(tripAmount(trip))}`;
+      lastAddedId = trip.id;
+      mode = "month";
+      anchor = parseISODate(trip.date);
+      editingTripId = null;
+      setTimeout(() => { flash = null; render(); }, 2800);
+      render();
+    }
+    function updateTrip(id, data) {
+      const t = state.trips.find((x) => x.id === id);
+      if (!t) return;
+      const place = state.places.find((p) => p.id === data.placeId);
+      t.date = data.date;
+      t.placeId = data.placeId;
+      t.placeName = place?.name ?? t.placeName;
+      t.unitPriceMillimes = data.unitPriceMillimes;
+      t.roundTrip = data.multiplier === 2; t.multiplier = data.multiplier;
+      t.note = data.note.trim();
+      save();
+      editingTripId = null;
+      render();
+    }
+    function removeTrip(id) {
+      state.trips = state.trips.filter((t) => t.id !== id);
+      save();
+      confirmDeleteTripId = null;
+      editingTripId = null;
+      render();
+    }
+    function exportCsv(trips) {
+      const sorted = [...trips].sort((a, b) => a.date.localeCompare(b.date));
+      const cell = (v) => (/[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+      const amt = (c) => (c / 100).toFixed(2).replace(".", ",");
+      const lines = [["Date", "Lieu", "Type", "Prix unitaire", "Montant", "Note"].join(";")];
+      let total = 0;
+      for (const t of sorted) {
+        const a = tripAmount(t);
+        total += a;
+        lines.push([t.date, t.placeName, (Number(t.multiplier) === 1.5 ? "×1,5" : t.roundTrip ? "Aller-retour" : "Aller simple"), amt(t.unitPriceMillimes), amt(a), t.note].map(cell).join(";"));
+      }
+      lines.push(["", "", "", "Total", amt(total), ""].join(";"));
+      const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      const name = mode === "all" ? "deplacements.csv"
+        : mode === "year" ? `deplacements-${anchor.getFullYear()}.csv`
+        : mode === "month" ? `deplacements-${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, "0")}.csv`
+        : `deplacements-semaine-${toISODate(startOfWeek(anchor))}.csv`;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // ——— Render ———
+    function render() {
+      const app = document.getElementById("app");
+      document.querySelectorAll(".tabs button").forEach((b) => {
+        b.setAttribute("aria-selected", b.dataset.view === view ? "true" : "false");
+      });
+
+      if (view === "lieux") {
+        app.innerHTML = renderLieux();
+        bindLieux();
+        return;
+      }
+
+      const started = state.places.length > 0 || state.trips.length > 0 || state.advances.length > 0;
+      if (!started) {
+        app.innerHTML = renderWelcome();
+        app.querySelector("[data-go-lieux]")?.addEventListener("click", () => { view = "lieux"; render(); });
+        return;
+      }
+
+      ensurePlaceSelected();
+      const visible = state.trips.filter((t) => inPeriod(t.date));
+      const total = visible.reduce((s, t) => s + tripAmount(t), 0);
+      const groups = groupByDate(visible);
+      const rows = totalsByPlace(visible);
+
+      app.innerHTML = `
+        <div class="grid ledger-grid">
+          ${renderSummary(total, visible)}
+          ${renderAdvances(state.advances.filter((a) => inPeriod(a.date)))}
+          <div class="sticky-panel">${renderAddForm()}</div>
+          ${rows.length ? renderBreakdown(rows) : ""}
+          ${renderJournal(groups)}
+        </div>
+      `;
+      bindJournal();
+    }
+
+    function renderWelcome() {
+      return `
+        <div class="grid">
+          <section class="panel pad">
+            <h2 style="font-size:1.875rem">Note tes déplacements</h2>
+            <p class="muted mt2" style="max-width:36rem">
+              Les prix des lieux sont enregistrés une fois. Ensuite tu indiques seulement le lieu — le total se calcule automatiquement par mois.
+            </p>
+            <button type="button" class="btn btn-primary mt5" style="width:auto;padding-left:1.5rem;padding-right:1.5rem" data-go-lieux>
+              Ajouter un lieu
+            </button>
+          </section>
+          <ol class="steps">
+            <li class="panel pad">
+              <span class="step-n">1</span>
+              <p class="fw6 mt2">Le lieu</p>
+              <p class="sm muted mt1">Un client, une agence, un chantier.</p>
+            </li>
+            <li class="panel pad">
+              <span class="step-n">2</span>
+              <p class="fw6 mt2">Le prix (déjà fixé)</p>
+              <p class="sm muted mt1">Tu le saisis une fois ; chaque trajet le reprend automatiquement.</p>
+            </li>
+            <li class="panel pad">
+              <span class="step-n">3</span>
+              <p class="fw6 mt2">Le mois</p>
+              <p class="sm muted mt1">Le total de tes déplacements, mois par mois.</p>
+            </li>
+          </ol>
+        </div>
+      `;
+    }
+
+    function renderSummary(total, trips) {
+      const avg = trips.length ? Math.round(total / trips.length) : 0;
+      return `
+        <section class="panel pad" style="grid-column:1">
+          <div class="flex items-center justify-between gap2">
+            ${mode === "all" ? '<span style="width:2.75rem"></span>' : '<button type="button" class="btn-icon" data-shift="-1" aria-label="Période précédente">‹</button>'}
+            <h2 style="flex:1;min-width:0;text-align:center;font-size:1.25rem">${periodLabel()}</h2>
+            ${mode === "all" ? '<span style="width:2.75rem"></span>' : '<button type="button" class="btn-icon" data-shift="1" aria-label="Période suivante">›</button>'}
+          </div>
+          <div class="segment mt4" role="group" aria-label="Période">
+            ${["month","week","year","all"].map((m) => {
+              const labels = { month: "Mois", week: "Semaine", year: "Année", all: "Tout" };
+              return `<button type="button" data-mode="${m}" aria-pressed="${mode === m}">${labels[m]}</button>`;
+            }).join("")}
+          </div>
+          ${mode === "month" ? `<p class="xs muted mt2" style="text-align:center">Calcul automatique pour ce mois · utilise ‹ › pour changer de mois</p>` : ""}
+          <p class="sm fw6 muted mt5">${mode === "month" ? "Total du mois" : mode === "week" ? "Total de la semaine" : mode === "year" ? "Total de l'année" : "Total"}</p>
+          <p class="money" style="font-family:Fraunces,Georgia,serif;font-size:2.25rem;line-height:1;margin-top:0.25rem">${formatMoney(total)}</p>
+          <div class="flex items-center justify-between gap3 mt2 flex-wrap">
+            <p class="sm muted">
+              ${countLabel(trips.length, "déplacement", "déplacements")}${trips.length ? ` · ${formatMoney(avg)} en moyenne` : ""}
+            </p>
+            <button type="button" class="btn-quiet" data-export ${trips.length ? "" : "disabled"}>Exporter</button>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderAdvances(advances) {
+      const totalAdv = advances.reduce((sum, a) => sum + a.amountMillimes, 0);
+      const remaining = (state.trips.filter((t) => inPeriod(t.date)).reduce((sum, t) => sum + tripAmount(t), 0)) - totalAdv;
+      return `
+        <section class="panel pad" style="grid-column:1">
+          <div class="flex items-center justify-between gap2 flex-wrap"><h2 style="font-size:1.15rem">Avances reçues</h2><span class="sm muted">${countLabel(advances.length, "avance", "avances")}</span></div>
+          <div class="grid gap2 mt3" style="grid-template-columns:1fr 1fr">
+            <div style="background:var(--pine-soft);border-radius:12px;padding:1rem"><p class="xs muted">Total avances</p><p class="money fw6 mt1">${formatMoney(totalAdv)}</p></div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem"><p class="xs muted">Solde déplacements − avances</p><p class="money fw6 mt1">${formatMoney(remaining)}</p></div>
+          </div>
+          <form id="advance-form" class="grid gap2 mt4" style="grid-template-columns:1fr 1fr;align-items:end">
+            <label class="sm">Date<input type="date" id="a-date" value="${todayISO()}" required style="width:100%;padding:.65rem;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)"></label>
+            <label class="sm">Montant (TND)<input type="text" inputmode="decimal" id="a-amount" placeholder="Ex. 150,000" required style="width:100%;padding:.65rem;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)"></label>
+            <button class="btn btn-primary" type="submit" style="grid-column:1/-1">Ajouter une avance</button>
+          </form>
+          ${advances.length ? `<ul class="grid gap2 mt4" style="list-style:none;padding:0;margin:0">${[...advances].sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<li class="flex items-center justify-between gap2" style="border-top:1px solid var(--line);padding:.75rem 0"><div><p class="fw6">${formatMoney(a.amountMillimes)}</p><p class="xs muted">${shortYearFmt.format(parseISODate(a.date))}</p></div><button class="btn-quiet" type="button" data-advance-del="${a.id}">Supprimer</button></li>`).join("")}</ul>` : `<p class="sm muted mt3">Aucune avance enregistrée pour cette période.</p>`}
+        </section>`;
+    }
+
+    function renderBreakdown(rows) {
+      const max = rows[0]?.cents || 0;
+      return `
+        <section class="panel pad" style="grid-column:1">
+          <h2 style="font-family:Source Sans 3,sans-serif;font-size:1.125rem;letter-spacing:0">Par lieu</h2>
+          <ul class="grid gap3 mt3" style="list-style:none;padding:0;margin:0.75rem 0 0">
+            ${rows.map((r) => `
+              <li>
+                <div class="flex items-baseline justify-between gap3">
+                  <p class="fw6 truncate min0">${esc(r.name)}</p>
+                  <p class="money fw6 shrink0">${formatMoney(r.cents)}</p>
+                </div>
+                <p class="sm muted">${countLabel(r.count, "trajet", "trajets")}</p>
+                <div class="bar" aria-hidden="true"><i style="width:${max ? (r.cents / max) * 100 : 0}%"></i></div>
+              </li>
+            `).join("")}
+          </ul>
+        </section>
+      `;
+    }
+
+    function renderAddForm() {
+      if (state.places.length === 0) {
+        return `
+          <section class="panel pad">
+            <h2 style="font-size:1.5rem">Nouveau déplacement</h2>
+            <p class="sm muted mt2">Ajoute d'abord un lieu (avec son prix en TND).</p>
+            <button type="button" class="btn btn-primary mt4" data-go-lieux>Ajouter un lieu</button>
+          </section>
+        `;
+      }
+      const picker = sortPlacesForPicker();
+      const selected = state.places.find((p) => p.id === form.placeId);
+      const unit = form.adjust ? parseMoney(form.priceInput) : (selected?.priceMillimes ?? null);
+      const mult = Number(form.multiplier) || (form.roundTrip ? 2 : 1);
+      const total = unit == null ? null : unit * mult;
+      const today = todayISO();
+
+      return `
+        <section class="panel pad">
+          <h2 style="font-size:1.5rem">Nouveau déplacement</h2>
+          <form id="add-form" class="grid gap3 mt4" novalidate>
+            <div>
+              <div class="flex items-center justify-between gap3">
+                <label for="f-date">Date</label>
+                ${form.date !== today ? `<button type="button" class="btn-quiet" data-today style="padding:0">Aujourd'hui</button>` : ""}
+              </div>
+              <input id="f-date" class="field" type="date" required value="${form.date}" />
+            </div>
+            <div>
+              <p class="label">Lieu</p>
+              <div class="place-list">
+                ${picker.map((p) => `
+                  <button type="button" class="place-btn" data-place="${p.id}" aria-pressed="${form.placeId === p.id}" style="flex-direction:column;align-items:flex-start;justify-content:center;min-height:3.5rem;padding-top:0.5rem;padding-bottom:0.5rem">
+                    <span class="truncate" style="width:100%">${esc(p.name)}</span>
+                    <span class="money muted" style="font-size:0.875rem;font-weight:400">${formatMoney(p.priceMillimes)}</span>
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+            <div class="segment">
+              <button type="button" data-rt="1" aria-pressed="${form.multiplier === 1}">Aller simple ×1</button>
+              <button type="button" data-rt="1.5" aria-pressed="${form.multiplier === 1.5}">×1,5</button>
+              <button type="button" data-rt="2" aria-pressed="${form.multiplier === 2}">Aller-retour ×2</button>
+            </div>
+            ${form.adjust ? `
+              <div>
+                <label for="f-price">Prix unitaire de ce trajet</label>
+                <input id="f-price" class="field" inputmode="decimal" autocomplete="off" value="${esc(form.priceInput)}" />
+                <p class="sm muted mt1">Ce changement ne modifie pas le prix du lieu.</p>
+                <button type="button" class="btn-quiet" data-no-adjust style="padding-left:0">Revenir au prix du lieu</button>
+              </div>
+            ` : ""}
+            ${form.showNote ? `
+              <div>
+                <label for="f-note">Note <span class="muted" style="font-weight:400">(facultatif)</span></label>
+                <input id="f-note" class="field" maxlength="160" autocomplete="off" placeholder="Réunion, péage, chantier…" value="${esc(form.note)}" />
+              </div>
+            ` : ""}
+            <div class="flex flex-wrap gap2">
+              ${!form.adjust ? `<button type="button" class="btn-quiet" data-adjust style="padding-left:0">Ajuster le prix</button>` : ""}
+              ${!form.showNote ? `<button type="button" class="btn-quiet" data-show-note style="padding-left:0">Ajouter une note</button>` : ""}
+            </div>
+            <div class="amount desktop-only">
+              <div class="row">
+                <p class="sm fw6">Ce déplacement</p>
+                <p class="money value">${total == null ? "—" : formatMoney(total)}</p>
+              </div>
+              ${unit != null ? `<p class="sm muted mt1">${mult} × ${formatMoney(unit)}</p>` : (form.adjust ? `<p class="sm fw6 mt1">Indique un prix valide, par exemple 25,500.</p>` : "")}
+              ${flash ? `<p class="status mt1" role="status">Ajouté · ${esc(flash)}</p>` : ""}
+              ${form.error ? `<p class="error mt1" role="alert">${esc(form.error)}</p>` : ""}
+            </div>
+            <div class="action-bar">
+              <div class="inner">
+                <div class="mobile-only min0" style="flex:1">
+                  <p class="xs muted">Ce déplacement</p>
+                  <p class="money" style="font-family:Fraunces,Georgia,serif;font-size:1.5rem;line-height:1">${total == null ? "—" : formatMoney(total)}</p>
+                  ${flash ? `<p class="xs status" role="status">Ajouté · ${esc(flash)}</p>` : ""}
+                  ${form.error ? `<p class="xs error" role="alert">${esc(form.error)}</p>` : ""}
+                </div>
+                <button type="submit" class="btn btn-primary" style="flex:1;min-width:8rem">Enregistrer</button>
+              </div>
+            </div>
+          </form>
+        </section>
+      `;
+    }
+
+    function renderJournal(groups) {
+      return `
+        <section class="panel" style="overflow:hidden;grid-column:1">
+          <div class="pad" style="padding-bottom:0.75rem">
+            <h2 style="font-size:1.5rem">Journal</h2>
+          </div>
+          ${groups.length === 0
+            ? `<p class="muted" style="border-top:1px solid var(--line);padding:2rem 1rem;text-align:center">Aucun déplacement sur cette période.</p>`
+            : groups.map((g) => `
+              <div>
+                <h3 class="day-head">${capitalize(dayFmt.format(parseISODate(g.date)))}</h3>
+                ${g.trips.map((t) => renderTripRow(t)).join("")}
+              </div>
+            `).join("")}
+          }
+        </section>
+      `;
+    }
+
+    function renderTripRow(t) {
+      if (editingTripId === t.id) return renderTripEditor(t);
+      const dateLabel = capitalize(dayFmt.format(parseISODate(t.date)));
+      return `
+        <div class="trip-row${lastAddedId === t.id ? " hi" : ""}" data-trip="${t.id}">
+          <div class="min0">
+            <p class="fw6 truncate">${esc(t.placeName)}</p>
+            <p class="sm muted mt1">${dateLabel}</p>
+            <p class="money mt1" style="font-family:Fraunces,Georgia,serif;font-size:1.35rem;line-height:1.15">${formatMoney(tripAmount(t))}</p>
+            ${(Number(t.multiplier) === 1.5) ? `<p class="mt2"><span class="pill">×1,5</span></p>` : (Number(t.multiplier) === 2 || t.roundTrip) ? `<p class="mt2"><span class="pill">Aller-retour ×2</span></p>` : ""}
+            ${t.note ? `<p class="sm muted mt1">${esc(t.note)}</p>` : ""}
+          </div>
+          ${confirmDeleteTripId === t.id ? `
+            <div class="mt2">
+              <p class="sm">Supprimer ce déplacement ?</p>
+              <div class="flex flex-wrap gap2 mt1">
+                <button type="button" class="btn-quiet" data-cancel-del>Annuler</button>
+                <button type="button" class="btn-danger" data-confirm-del="${t.id}">Supprimer</button>
+              </div>
+            </div>
+          ` : `
+            <div class="flex flex-wrap gap2 mt2">
+              <button type="button" class="btn-quiet" data-edit="${t.id}">Modifier</button>
+              <button type="button" class="btn-quiet" data-del="${t.id}">Supprimer</button>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderTripEditor(t) {
+      const known = state.places.some((p) => p.id === t.placeId);
+      const picker = sortPlacesForPicker();
+      const unit = parseMoney(t._editPrice ?? millimesToInput(t.unitPriceMillimes));
+      const rt = t._editMultiplier ?? (t.multiplier || (t.roundTrip ? 2 : 1));
+      const mult = Number(rt) || 1;
+      const total = unit == null ? null : unit * mult;
+      return `
+        <div class="trip-row" data-edit-trip="${t.id}">
+          <form class="grid gap3" data-save-trip="${t.id}" novalidate>
+            <div>
+              <label>Date</label>
+              <input class="field" type="date" name="date" value="${t._editDate ?? t.date}" />
+            </div>
+            ${state.places.length ? `
+              <div>
+                <p class="label">Lieu</p>
+                ${!known ? `<p class="sm muted mt1 mb2">Lieu d'origine : ${esc(t.placeName)}. Il n'est plus dans le catalogue.</p>` : ""}
+                <div class="place-list">
+                  ${picker.map((p) => `
+                    <button type="button" class="place-btn" data-edit-place="${p.id}" aria-pressed="${(t._editPlaceId ?? t.placeId) === p.id && known}" style="flex-direction:column;align-items:flex-start;justify-content:center;min-height:3.5rem;padding-top:0.5rem;padding-bottom:0.5rem">
+                      <span class="truncate" style="width:100%">${esc(p.name)}</span>
+                      <span class="money muted" style="font-size:0.875rem;font-weight:400">${formatMoney(p.priceMillimes)}</span>
+                    </button>
+                  `).join("")}
+                </div>
+              </div>
+            ` : `<p class="sm muted">${esc(t.placeName)}</p>`}
+            <div class="segment">
+              <button type="button" data-edit-rt="1" aria-pressed="${Number(rt) === 1}">Aller simple ×1</button>
+              <button type="button" data-edit-rt="1.5" aria-pressed="${Number(rt) === 1.5}">×1,5</button>
+              <button type="button" data-edit-rt="2" aria-pressed="${Number(rt) === 2}">Aller-retour ×2</button>
+            </div>
+            <div>
+              <label>Prix unitaire</label>
+              <input class="field" name="price" inputmode="decimal" value="${esc(t._editPrice ?? millimesToInput(t.unitPriceMillimes))}" />
+            </div>
+            <div>
+              <label>Note</label>
+              <input class="field" name="note" maxlength="160" value="${esc(t._editNote ?? t.note)}" />
+            </div>
+            <div class="amount">
+              <div class="row">
+                <p class="sm fw6">Ce déplacement</p>
+                <p class="money value">${total == null ? "—" : formatMoney(total)}</p>
+              </div>
+              ${unit != null ? `<p class="sm muted mt1">${mult} × ${formatMoney(unit)}</p>` : ""}
+            </div>
+            <div class="flex flex-wrap gap2">
+              <button type="submit" class="btn btn-secondary">Enregistrer</button>
+              <button type="button" class="btn-quiet" data-cancel-edit>Annuler</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function renderLieux() {
+      const ordered = [...state.places].sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+      return `
+        <div class="grid" style="max-width:36rem;margin:0 auto">
+          <section class="panel pad">
+            <h2 style="font-size:1.5rem">Nouveau lieu</h2>
+            <p class="sm muted mt1">Saisis le prix une seule fois en TND. Ensuite, tu n'indiques que le lieu : le montant se calcule automatiquement.</p>
+            <form id="place-form" class="grid gap3 mt4" novalidate>
+              <div>
+                <label for="p-name">Nom</label>
+                <input id="p-name" class="field" maxlength="80" autocomplete="off" placeholder="Agence Lyon, client Martin…" />
+              </div>
+              <div>
+                <label for="p-price">Prix d'un trajet (TND)</label>
+                <input id="p-price" class="field" inputmode="decimal" autocomplete="off" placeholder="25,500" />
+              </div>
+              <p class="error hidden" id="p-error" role="alert"></p>
+              <button type="submit" class="btn btn-primary">Ajouter le lieu</button>
+            </form>
+            ${statusMsg ? `<p class="status mt3" role="status">${esc(statusMsg)}</p>` : ""}
+          </section>
+          ${ordered.length === 0
+            ? `<p class="sm muted">Aucun lieu pour l'instant. Ajoute le premier ci-dessus.</p>`
+            : `<ul class="grid gap3" style="list-style:none;padding:0;margin:0">
+                ${ordered.map((p) => renderPlaceCard(p)).join("")}
+              </ul>`
+          }
+        </div>
+      `;
+    }
+
+    function renderPlaceCard(p) {
+      const count = state.trips.filter((t) => t.placeId === p.id).length;
+      if (editingPlaceId === p.id) {
+        return `
+          <li class="panel pad">
+            <form data-save-place="${p.id}" class="grid gap3" novalidate>
+              <div>
+                <label>Nom</label>
+                <input class="field" name="name" maxlength="80" value="${esc(p.name)}" />
+              </div>
+              <div>
+                <label>Prix d'un trajet (TND)</label>
+                <input class="field" name="price" inputmode="decimal" value="${millimesToInput(p.priceMillimes)}" />
+              </div>
+              <div class="flex flex-wrap gap2">
+                <button type="submit" class="btn btn-secondary">Enregistrer</button>
+                <button type="button" class="btn-quiet" data-cancel-place>Annuler</button>
+              </div>
+            </form>
+          </li>
+        `;
+      }
+      return `
+        <li class="panel pad">
+          <div class="flex items-start justify-between gap3">
+            <div class="min0">
+              <h3 style="font-size:1.25rem" class="truncate">${esc(p.name)}</h3>
+              <p class="sm muted mt1">${countLabel(count, "déplacement", "déplacements")}</p>
+            </div>
+            <div style="text-align:right">
+              <p class="money" style="font-family:Fraunces,Georgia,serif;font-size:1.5rem;line-height:1">${formatMoney(p.priceMillimes)}</p>
+              <p class="xs muted mt1">par trajet</p>
+            </div>
+          </div>
+          ${confirmDeletePlaceId === p.id ? `
+            <div class="mt3">
+              <p class="sm">Supprimer « ${esc(p.name)} » ?${count ? " Les déplacements déjà notés restent dans le journal, avec leur montant." : ""}</p>
+              <div class="flex flex-wrap gap2 mt2">
+                <button type="button" class="btn-quiet" data-cancel-del-place>Annuler</button>
+                <button type="button" class="btn-danger" data-confirm-del-place="${p.id}">Supprimer</button>
+              </div>
+            </div>
+          ` : `
+            <div class="flex flex-wrap gap2 mt3">
+              <button type="button" class="btn btn-secondary" data-log="${p.id}">Noter un trajet</button>
+              <button type="button" class="btn-quiet" data-edit-place="${p.id}">Modifier</button>
+              <button type="button" class="btn-quiet" data-del-place="${p.id}">Supprimer</button>
+            </div>
+          `}
+        </li>
+      `;
+    }
+
+    function esc(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // ——— Bindings ———
+    function bindJournal() {
+      document.querySelectorAll("[data-shift]").forEach((b) => {
+        b.addEventListener("click", () => shift(Number(b.dataset.shift)));
+      });
+      document.querySelectorAll("[data-mode]").forEach((b) => {
+        b.addEventListener("click", () => { mode = b.dataset.mode; render(); });
+      });
+      document.querySelector("[data-export]")?.addEventListener("click", () => {
+        exportCsv(state.trips.filter((t) => inPeriod(t.date)));
+      });
+      document.querySelector("[data-go-lieux]")?.addEventListener("click", () => { view = "lieux"; render(); });
+      document.querySelector("[data-today]")?.addEventListener("click", () => { form.date = todayISO(); render(); });
+
+      const formEl = document.getElementById("add-form");
+      if (formEl) {
+        formEl.querySelector("#f-date")?.addEventListener("change", (e) => { form.date = e.target.value; });
+        formEl.querySelectorAll("[data-place]").forEach((b) => {
+          b.addEventListener("click", () => {
+            form.placeId = b.dataset.place;
+            const p = state.places.find((x) => x.id === form.placeId);
+            if (p) form.priceInput = millimesToInput(p.priceMillimes);
+            form.error = null;
+            render();
+          });
+        });
+        formEl.querySelectorAll("[data-rt]").forEach((b) => {
+          b.addEventListener("click", () => {
+            form.multiplier = Number(b.dataset.rt); form.roundTrip = form.multiplier === 2;
+            state.preferences.roundTrip = form.roundTrip; state.preferences.multiplier = form.multiplier; state.preferences.multiplier = form.multiplier;
+            save();
+            render();
+          });
+        });
+        formEl.querySelector("[data-adjust]")?.addEventListener("click", () => {
+          const p = state.places.find((x) => x.id === form.placeId);
+          if (p) form.priceInput = millimesToInput(p.priceMillimes);
+          form.adjust = true;
+          render();
+        });
+        formEl.querySelector("[data-no-adjust]")?.addEventListener("click", () => {
+          form.adjust = false;
+          render();
+        });
+        formEl.querySelector("[data-show-note]")?.addEventListener("click", () => {
+          form.showNote = true;
+          render();
+        });
+        formEl.querySelector("#f-price")?.addEventListener("input", (e) => {
+          form.priceInput = e.target.value;
+          // live update amount without full re-render of inputs focus loss:
+          form.error = null;
+        });
+        formEl.querySelector("#f-price")?.addEventListener("change", (e) => {
+          form.priceInput = e.target.value;
+          render();
+        });
+        formEl.querySelector("#f-note")?.addEventListener("input", (e) => { form.note = e.target.value; });
+        formEl.addEventListener("submit", (e) => {
+          e.preventDefault();
+          if (form.adjust) {
+            const el = formEl.querySelector("#f-price");
+            if (el) form.priceInput = el.value;
+          }
+          const noteEl = formEl.querySelector("#f-note");
+          if (noteEl) form.note = noteEl.value;
+          const dateEl = formEl.querySelector("#f-date");
+          if (dateEl) form.date = dateEl.value;
+          addTrip();
+        });
+      }
+
+      document.querySelectorAll("[data-edit]").forEach((b) => {
+        b.addEventListener("click", () => {
+          editingTripId = b.dataset.edit;
+          confirmDeleteTripId = null;
+          const t = state.trips.find((x) => x.id === editingTripId);
+          if (t) {
+            t._editDate = t.date;
+            t._editPlaceId = t.placeId;
+            t._editPrice = millimesToInput(t.unitPriceMillimes);
+            t._editRt = t.roundTrip;
+            t._editNote = t.note;
+          }
+          render();
+        });
+      });
+      document.querySelectorAll("[data-del]").forEach((b) => {
+        b.addEventListener("click", () => {
+          confirmDeleteTripId = b.dataset.del;
+          editingTripId = null;
+          render();
+        });
+      });
+      document.querySelector("[data-cancel-del]")?.addEventListener("click", () => {
+        confirmDeleteTripId = null;
+        render();
+      });
+      document.querySelector("[data-confirm-del]")?.addEventListener("click", (e) => {
+        removeTrip(e.currentTarget.dataset.confirmDel);
+      });
+      document.querySelector("[data-cancel-edit]")?.addEventListener("click", () => {
+        editingTripId = null;
+        render();
+      });
+
+      const editForm = document.querySelector("[data-save-trip]");
+      if (editForm) {
+        const tid = editForm.dataset.saveTrip;
+        const t = state.trips.find((x) => x.id === tid);
+        editForm.querySelectorAll("[data-edit-place]").forEach((b) => {
+          b.addEventListener("click", () => {
+            t._editPlaceId = b.dataset.editPlace;
+            const p = state.places.find((x) => x.id === t._editPlaceId);
+            if (p) t._editPrice = millimesToInput(p.priceMillimes);
+            render();
+          });
+        });
+        editForm.querySelectorAll("[data-edit-rt]").forEach((b) => {
+          b.addEventListener("click", () => {
+            t._editMultiplier = Number(b.dataset.editRt);
+            render();
+          });
+        });
+        editForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const fd = new FormData(editForm);
+          const price = parseMoney(fd.get("price"));
+          if (price == null) {
+            alert("Indique un prix valide, par exemple 25,500.");
+            return;
+          }
+          updateTrip(tid, {
+            date: fd.get("date"),
+            placeId: t._editPlaceId ?? t.placeId,
+            unitPriceMillimes: price,
+            roundTrip: (t._editMultiplier ?? (t.multiplier || (t.roundTrip ? 2 : 1))) === 2, multiplier: Number(t._editMultiplier ?? (t.multiplier || (t.roundTrip ? 2 : 1))),
+            note: fd.get("note") || "",
+          });
+        });
+      }
+      const advanceForm = document.getElementById("advance-form");
+      advanceForm?.addEventListener("submit", (e) => {
+        e.preventDefault(); const amount = parseMoney(advanceForm.querySelector("#a-amount").value);
+        const date = advanceForm.querySelector("#a-date").value;
+        if (amount == null || !date) { alert("Indique une date et un montant valide."); return; }
+        state.advances.push({ id: uid(), date, amountMillimes: amount }); save(); render();
+      });
+      document.querySelectorAll("[data-advance-del]").forEach((b) => b.addEventListener("click", () => {
+        if (confirm("Supprimer cette avance ?")) { state.advances = state.advances.filter(a => a.id !== b.dataset.advanceDel); save(); render(); }
+      }));
+    }
+
+    function bindLieux() {
+      const form = document.getElementById("place-form");
+      form?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const name = form.querySelector("#p-name").value.trim();
+        const price = parseMoney(form.querySelector("#p-price").value);
+        const err = form.querySelector("#p-error");
+        if (!name) {
+          err.textContent = "Indique un nom de lieu.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (price == null) {
+          err.textContent = "Indique un prix valide, par exemple 25,500.";
+          err.classList.remove("hidden");
+          return;
+        }
+        err.classList.add("hidden");
+        form.querySelector("#p-name").value = "";
+        form.querySelector("#p-price").value = "";
+        addPlace(name, price);
+      });
+
+      document.querySelectorAll("[data-log]").forEach((b) => {
+        b.addEventListener("click", () => {
+          focusPlaceId = b.dataset.log;
+          view = "journal";
+          render();
+        });
+      });
+      document.querySelectorAll("[data-edit-place]").forEach((b) => {
+        b.addEventListener("click", () => {
+          editingPlaceId = b.dataset.editPlace;
+          confirmDeletePlaceId = null;
+          statusMsg = null;
+          render();
+        });
+      });
+      document.querySelectorAll("[data-del-place]").forEach((b) => {
+        b.addEventListener("click", () => {
+          confirmDeletePlaceId = b.dataset.delPlace;
+          editingPlaceId = null;
+          render();
+        });
+      });
+      document.querySelector("[data-cancel-del-place]")?.addEventListener("click", () => {
+        confirmDeletePlaceId = null;
+        render();
+      });
+      document.querySelector("[data-confirm-del-place]")?.addEventListener("click", (e) => {
+        removePlace(e.currentTarget.dataset.confirmDelPlace);
+      });
+      document.querySelector("[data-cancel-place]")?.addEventListener("click", () => {
+        editingPlaceId = null;
+        render();
+      });
+      document.querySelector("[data-save-place]")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const id = e.currentTarget.dataset.savePlace;
+        const fd = new FormData(e.currentTarget);
+        const name = String(fd.get("name") || "").trim();
+        const price = parseMoney(fd.get("price"));
+        if (!name || price == null) {
+          alert("Nom et prix (TND) valides requis.");
+          return;
+        }
+        updatePlace(id, name, price);
+      });
+    }
+
+    document.querySelectorAll(".tabs button").forEach((b) => {
+      b.addEventListener("click", () => {
+        view = b.dataset.view;
+        statusMsg = null;
+        render();
+      });
+    });
+
+    // Backup/restore of the complete application data
+    document.getElementById("backup-export")?.addEventListener("click", () => {
+      const payload = { version: 1, exportedAt: new Date().toISOString(), places: state.places, trips: state.trips, advances: state.advances, preferences: state.preferences };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "carnet-de-route-sauvegarde.json"; a.click(); URL.revokeObjectURL(url);
+    });
+    const backupFile = document.getElementById("backup-file");
+    document.getElementById("backup-import")?.addEventListener("click", () => backupFile?.click());
+    backupFile?.addEventListener("change", async () => {
+      const file = backupFile.files?.[0]; if (!file) return;
+      try { const data = JSON.parse(await file.text());
+        if (!Array.isArray(data.places) || !Array.isArray(data.trips)) throw new Error("Format invalide");
+        if (!confirm("Restaurer cette sauvegarde ? Les données actuelles seront remplacées.")) return;
+        state.places = data.places.filter(isPlace); state.trips = data.trips.filter(isTrip); state.advances = Array.isArray(data.advances) ? data.advances.filter(isAdvance) : [];
+        state.preferences = { roundTrip: data.preferences?.roundTrip === true, multiplier: Number(data.preferences?.multiplier) || (data.preferences?.roundTrip ? 2 : 1) }; save(); statusMsg = "Sauvegarde restaurée."; render();
+      } catch { alert("Fichier de sauvegarde invalide."); } finally { backupFile.value = ""; }
+    });
+    let installPrompt; const installBtn = document.getElementById("install-app");
+    window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; installBtn?.classList.remove("hidden"); });
+    installBtn?.addEventListener("click", async () => { if (!installPrompt) return; installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; installBtn.classList.add("hidden"); });
+    if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
+
+    render();
+  })();
+  </script>
+</body>
+</html>
